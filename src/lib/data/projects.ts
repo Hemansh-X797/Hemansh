@@ -7,6 +7,7 @@ export type Project = {
   repo?: string;
   status: 'live' | 'ongoing' | 'private';
   access?: 'collaborators-only';
+  featured?: boolean;
 };
 
 export const projects: Project[] = [
@@ -18,6 +19,7 @@ export const projects: Project[] = [
     url: 'https://pulse-main2.vercel.app',
     repo: 'https://github.com/Hemansh-X797/Pulse',
     status: 'ongoing',
+    featured: true,
   },
   {
     slug: 'conclave-of-the-noble-souls',
@@ -26,6 +28,7 @@ export const projects: Project[] = [
     description: 'A structured collective — governance, roles, and systems for a noble-souls community.',
     repo: 'https://github.com/Hemansh-X797/Conclave-of-the-Noble-Souls',
     status: 'ongoing',
+    featured: true,
   },
   {
     slug: 'vince',
@@ -34,6 +37,7 @@ export const projects: Project[] = [
     description: 'A private neural systems project. Access is restricted to collaborators.',
     status: 'private',
     access: 'collaborators-only',
+    featured: true,
   },
   {
     slug: 'lumen-reader',
@@ -42,6 +46,7 @@ export const projects: Project[] = [
     description: 'A reading tool built for focus and clarity.',
     repo: 'https://github.com/Hemansh-X797/Lumen-Reader',
     status: 'ongoing',
+    featured: true,
   },
   {
     slug: 'cocktails',
@@ -50,5 +55,17 @@ export const projects: Project[] = [
     description: 'An interactive, aesthetic cocktail guide.',
     url: 'https://cocktails-two-coral.vercel.app',
     status: 'live',
+    featured: true,
+  },
+  {
+    slug: 'hemansh-site',
+    name: 'Hemansh — Digital Domain',
+    tag: 'Personal OS',
+    description: 'This site. The digital domain itself — built in the open.',
+    repo: 'https://github.com/Hemansh-X797/Hemansh',
+    status: 'ongoing',
   },
 ];
+
+export const ongoingProjects = projects.filter((p) => p.status === 'ongoing');
+export const featuredProjects = projects.filter((p) => p.featured);

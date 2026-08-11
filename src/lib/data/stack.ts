@@ -9,6 +9,9 @@ export const databases = ['PostgreSQL', 'Supabase', 'SQLite (when it fits)', 'Up
 
 export const other = ['Living'];
 
+/** Spoken/written human languages — showing a working 6, not the full in-progress count. */
+export const spokenLanguages = ['English', 'Hindi', 'Greek', 'Latin', 'Arabic', 'Sanskrit'];
+
 /**
  * Capability index — no percentages, no ranks, no tiers. Just what's real.
  */
