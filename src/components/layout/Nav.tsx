@@ -1,0 +1,38 @@
+import Link from 'next/link';
+
+const links = [
+  { href: '/about', label: 'About' },
+  { href: '/work', label: 'Work' },
+  { href: '/books', label: 'Books' },
+  { href: '/stack', label: 'Stack' },
+  { href: '/contact', label: 'Contact' },
+];
+
+export default function Nav() {
+  return (
+    <nav className="fixed left-0 top-0 z-50 flex w-full items-center justify-between px-6 py-5 sm:px-10">
+      <Link
+        href="/"
+        data-magnetic
+        data-cursor-label="HOME"
+        className="font-display text-sm uppercase tracking-widest2 text-fg"
+      >
+        Hemansh
+      </Link>
+      <ul className="hidden gap-8 sm:flex">
+        {links.map((l) => (
+          <li key={l.href}>
+            <Link
+              href={l.href}
+              data-magnetic
+              data-cursor-label="GO"
+              className="font-hud text-[11px] uppercase tracking-widest text-muted transition-colors duration-300 hover:text-accent"
+            >
+              {l.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
