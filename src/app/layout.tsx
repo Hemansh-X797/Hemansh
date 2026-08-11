@@ -63,9 +63,6 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, 'max-video-preview': -1, 'max-image-preview': 'large', 'max-snippet': -1 },
   },
-  verification: {
-    google: 'google-site-verification=-aUPhezuAnwMzOuOWCw-AYyqqYhzlYRtQ98Bz1pkqT8',
-  },
 };
 
 function PersonGraph() {
