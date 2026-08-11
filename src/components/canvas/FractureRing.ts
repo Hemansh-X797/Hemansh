@@ -125,8 +125,8 @@ export function initFractureRing(canvas: HTMLCanvasElement): FractureRingHandle 
       }
     `,
     side: THREE.DoubleSide,
-    extensions: { derivatives: true },
   });
+  (crackMat as unknown as { extensions: { derivatives: boolean } }).extensions = { derivatives: true };
   group.add(new THREE.Mesh(addBarycentric(new THREE.TorusGeometry(TORUS_R, TORUS_r, 64, 64)), crackMat));
 
   // Fracture the torus surface into voronoi shards, each independently animatable
