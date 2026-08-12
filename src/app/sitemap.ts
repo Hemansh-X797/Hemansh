@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next';
 
-const SITE_URL = 'https://hemanshkumarmishra.vercel.app';
+const SITE_URL = 'https://hemansh.vercel.app';
 const routes = ['', '/about', '/work', '/books', '/stack', '/contact'];
 
 export default function sitemap(): MetadataRoute.Sitemap {

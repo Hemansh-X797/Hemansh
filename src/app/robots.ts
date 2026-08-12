@@ -3,6 +3,6 @@ import { MetadataRoute } from 'next';
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [{ userAgent: '*', allow: '/' }],
-    sitemap: 'https://hemanshkumarmishra.vercel.app/sitemap.xml',
+    sitemap: 'https://hemansh.vercel.app/sitemap.xml',
   };
 }
