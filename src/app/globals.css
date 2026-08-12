@@ -38,3 +38,18 @@ html, body {
   50%, 100% { opacity: 0; }
 }
 .caret { animation: blink 1s step-end infinite; }
+
+/* black -> shiny silver-white -> black metallic sweep, used on major headers */
+.text-shine {
+  background: linear-gradient(115deg, #6b6b6b 0%, #e8e8e4 22%, #ffffff 32%, #cfcfca 42%, #6b6b6b 60%, #9a9a96 78%, #ffffff 90%, #6b6b6b 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shine-sweep 9s ease-in-out infinite;
+}
+@keyframes shine-sweep {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
