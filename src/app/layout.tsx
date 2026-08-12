@@ -5,7 +5,7 @@ import './globals.css';
 import AntiGravityCursor from '@/components/cursor/AntiGravityCursor';
 import Nav from '@/components/layout/Nav';
 
-const SITE_URL = 'https://hemanshkumarmishra.vercel.app';
+const SITE_URL = 'https://hemansh.vercel.app';
 
 const josefin = Josefin_Sans({ subsets: ['latin'], variable: '--font-josefin', weight: ['400', '600', '700'] });
 const jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains' });
@@ -35,8 +35,9 @@ export const metadata: Metadata = {
   description:
     'Official digital domain of Hemansh Kumar Mishra (Hemansh-X797). Aspiring polymath and systems architect — creator of Pulse, Conclave of the Noble Souls, V.I.N.C.E., and Lumen Reader; author of The Discipline Code.',
   keywords: [
-    'Hemansh', 'Hemansh Kumar Mishra', 'Hemansh Mishra', 'Himansh', 'Himanshu',
-    'Hemansh-X797', 'The Discipline Code', 'Pulse social platform',
+    'Hemansh', 'Hemansh Kumar Mishra', 'Hemansh Mishra', 'Himansh', 'Himanshu', 'Hemunsh',
+    'Hemansh-X797', 'Hemansh vercel', 'hemansh.vercel.app',
+    'The Discipline Code', 'Pulse social platform',
     'Conclave of the Noble Souls', 'V.I.N.C.E.', 'Lumen Reader', 'polymath systems architect',
   ],
   authors: [{ name: 'Hemansh Kumar Mishra', url: SITE_URL }],
@@ -50,7 +51,7 @@ export const metadata: Metadata = {
     siteName: 'Hemansh — Digital Domain',
     locale: 'en_US',
     type: 'profile',
-    images: [{ url: `${SITE_URL}/og/home.jpg`, width: 1200, height: 630 }],
+    images: [{ url: `${SITE_URL}/og/hemansh.jpg`, width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
@@ -64,7 +65,7 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true, 'max-video-preview': -1, 'max-image-preview': 'large', 'max-snippet': -1 },
   },
   verification: {
-    google: '4gNIA8Hp3KLleWsCKXE1wooIH9jzAkqkPVX4THJpSWA', 
+    google: '4gNIA8Hp3KLleWsCKXE1wooIH9jzAkqkPVX4THJpSWA',
   },
 };
 
@@ -76,7 +77,7 @@ function PersonGraph() {
         '@type': 'Person',
         '@id': `${SITE_URL}/#person`,
         name: 'Hemansh Kumar Mishra',
-        alternateName: ['Hemansh', 'Hemansh Mishra', 'Himansh', 'Himanshu', 'Hemansh-X797'],
+        alternateName: ['Hemansh', 'Hemansh Mishra', 'Himansh', 'Himanshu', 'Hemunsh', 'Hemansh-X797'],
         url: SITE_URL,
         jobTitle: 'Aspiring Polymath & Systems Architect',
         description:
