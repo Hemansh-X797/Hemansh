@@ -43,7 +43,8 @@ function cellSeed(u: number, v: number): [number, number] {
 
 export type FractureRingHandle = {
   setActive: (active: boolean) => void;
-  setMouse: (nx: number, ny: number) => void; // normalized -1..1
+  setMouse: (nx: number, ny: number) => void; // normalized -1..1, camera parallax
+  setPointer: (clientX: number, clientY: number) => void; // raw pixel, for raycast hover
   dispose: () => void;
   resize: () => void;
 };
@@ -55,11 +56,11 @@ export function initFractureRing(canvas: HTMLCanvasElement): FractureRingHandle 
   const group = new THREE.Group();
   scene.add(group);
 
-  const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+  const camera = new THREE.PerspectiveCamera(42, canvas.clientWidth / Math.max(canvas.clientHeight, 1), 0.1, 100);
   camera.position.z = 7;
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
@@ -75,7 +76,8 @@ export function initFractureRing(canvas: HTMLCanvasElement): FractureRingHandle 
   rim.position.set(0, 0, 3);
   scene.add(rim);
 
-  // Obsidian shard material: near-black, high "wetness" via low roughness + clearcoat-like sheen
+  // Obsidian shard material: near-black, high "wetness" via low roughness + clearcoat-like sheen.
+  // emissive is animated per-fragment on hover-lift, so cracked-open shards glow white from within.
   const obsidianMat = new THREE.MeshPhysicalMaterial({
     color: 0x050505,
     roughness: 0.32,
@@ -83,6 +85,8 @@ export function initFractureRing(canvas: HTMLCanvasElement): FractureRingHandle 
     clearcoat: 0.6,
     clearcoatRoughness: 0.25,
     reflectivity: 0.5,
+    emissive: 0x000000,
+    emissiveIntensity: 0,
     side: THREE.DoubleSide,
   });
 
@@ -132,6 +136,7 @@ export function initFractureRing(canvas: HTMLCanvasElement): FractureRingHandle 
   // Fracture the torus surface into voronoi shards, each independently animatable
   type Frag = {
     mesh: THREE.Mesh;
+    mat: THREE.MeshPhysicalMaterial;
     cellCenter: THREE.Vector3;
     cellNormal: THREE.Vector3;
     rotAxis: THREE.Vector3;
@@ -200,10 +205,18 @@ export function initFractureRing(canvas: HTMLCanvasElement): FractureRingHandle 
       const aa = rnd[0] * TWO_PI;
       const rotAxis = tang.clone().multiplyScalar(Math.cos(aa)).addScaledVector(bitang, Math.sin(aa)).normalize();
 
-      const mesh = new THREE.Mesh(geo, obsidianMat);
+      const mesh = new THREE.Mesh(geo, obsidianMat.clone());
       mesh.position.copy(cellCenter).addScaledVector(cellNormal, 0.018);
       group.add(mesh);
-      fragments.push({ mesh, cellCenter, cellNormal, rotAxis, maxAngle: 0.5 + rnd[1] * 0.7, lift: 0 });
+      fragments.push({
+        mesh,
+        mat: mesh.material as THREE.MeshPhysicalMaterial,
+        cellCenter,
+        cellNormal,
+        rotAxis,
+        maxAngle: 0.5 + rnd[1] * 0.7,
+        lift: 0,
+      });
     }
     baseGeo.dispose();
   }
@@ -212,10 +225,33 @@ export function initFractureRing(canvas: HTMLCanvasElement): FractureRingHandle 
 
   const idle = gsap.to(group.rotation, { y: `+=${Math.PI * 2}`, duration: 28, ease: 'none', repeat: -1 });
 
+  // Invisible raycast surface (matches the torus envelope) — lets real mouse position
+  // hit-test against the ring so fragments crack open near the actual cursor point,
+  // not just a generic camera-relative tilt.
+  const raycastMesh = new THREE.Mesh(
+    new THREE.TorusGeometry(TORUS_R, TORUS_r * 1.15, 24, 48),
+    new THREE.MeshBasicMaterial({ visible: false })
+  );
+  group.add(raycastMesh);
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2(-10, -10);
+  const hoverPoint = new THREE.Vector3();
+  let hoverActive = 0; // eased 0..1
+
+  // A light that migrates to the live hover point and flares — this is the
+  // "breaks apart and gives white light" moment, driven by real geometry,
+  // not a canned CSS glow.
+  const hoverLight = new THREE.PointLight(0xffffff, 0, 3.2);
+  scene.add(hoverLight);
+
   let active = false;
   let mx = 0;
   let my = 0;
   let raf = 0;
+  let clientX = -9999;
+  let clientY = -9999;
+  let rectLeft = 0;
+  let rectTop = 0;
 
   function loop() {
     // mouse-reactive tilt, layered on top of the continuous idle spin
@@ -223,11 +259,36 @@ export function initFractureRing(canvas: HTMLCanvasElement): FractureRingHandle 
     const targetZ = mx * 0.15;
     group.rotation.z = THREE.MathUtils.lerp(group.rotation.z, targetZ, 0.04);
 
+    // raycast real cursor against the ring surface
+    ndc.set(
+      ((clientX - rectLeft) / canvas.clientWidth) * 2 - 1,
+      -((clientY - rectTop) / canvas.clientHeight) * 2 + 1
+    );
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObject(raycastMesh);
+    if (hits.length) {
+      raycastMesh.worldToLocal(hoverPoint.copy(hits[0].point));
+      hoverActive = THREE.MathUtils.lerp(hoverActive, 1, 0.15);
+    } else {
+      hoverActive = THREE.MathUtils.lerp(hoverActive, 0, 0.08);
+    }
+
     for (const f of fragments) {
-      const target = active ? 0 : 0; // shard-lift-on-hover reserved for a future "explode" interaction
-      f.lift = THREE.MathUtils.lerp(f.lift, target, 0.08);
-      f.mesh.position.copy(f.cellCenter).addScaledVector(f.cellNormal, 0.018 + f.lift * 0.3);
+      const dist = hoverActive > 0.01 ? f.cellCenter.distanceTo(hoverPoint) : Infinity;
+      const proximity = THREE.MathUtils.clamp(1 - dist / 0.85, 0, 1);
+      const target = proximity * hoverActive;
+      f.lift = THREE.MathUtils.lerp(f.lift, target, target > f.lift ? 0.18 : 0.06);
+      f.mesh.position.copy(f.cellCenter).addScaledVector(f.cellNormal, 0.018 + f.lift * 0.34);
       f.mesh.quaternion.setFromAxisAngle(f.rotAxis, f.lift * f.maxAngle);
+      f.mat.emissive.setRGB(f.lift, f.lift, f.lift);
+      f.mat.emissiveIntensity = f.lift * 1.6;
+    }
+
+    if (hoverActive > 0.01) {
+      hoverLight.position.copy(hoverPoint).applyMatrix4(group.matrixWorld);
+      hoverLight.intensity = hoverActive * 3.4;
+    } else {
+      hoverLight.intensity = 0;
     }
 
     renderer.render(scene, camera);
@@ -245,16 +306,28 @@ export function initFractureRing(canvas: HTMLCanvasElement): FractureRingHandle 
       mx = nx;
       my = ny;
     },
+    setPointer: (px: number, py: number) => {
+      const rect = canvas.getBoundingClientRect();
+      rectLeft = rect.left;
+      rectTop = rect.top;
+      clientX = px;
+      clientY = py;
+    },
     resize: () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      camera.aspect = w / Math.max(h, 1);
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(w, h, false);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     },
     dispose: () => {
       cancelAnimationFrame(raf);
       idle.kill();
-      fragments.forEach((f) => f.mesh.geometry.dispose());
+      fragments.forEach((f) => {
+        f.mesh.geometry.dispose();
+        f.mat.dispose();
+      });
       obsidianMat.dispose();
       crackMat.dispose();
       renderer.dispose();
