@@ -1,5 +1,9 @@
+'use client';
+
 import Image from 'next/image';
 import { Project } from '@/lib/data/projects';
+import PulseFlameLogo from './PulseFlameLogo';
+import VinceOrb from './VinceOrb';
 
 export default function ProjectCard({ project, index }: { project: Project; index: number }) {
   const href = project.status === 'private' ? undefined : project.url ?? project.repo;
@@ -42,6 +46,7 @@ export default function ProjectCard({ project, index }: { project: Project; inde
           {num} / {project.tag}
         </span>
         <div className="flex items-center gap-2">
+          {project.slug === 'pulse' && <PulseFlameLogo size={26} />}
           {project.logo && (
             <div className="relative h-6 w-6 opacity-80">
               <Image src={project.logo} alt={`${project.name} logo`} fill className="object-contain" />
@@ -54,6 +59,12 @@ export default function ProjectCard({ project, index }: { project: Project; inde
           )}
         </div>
       </div>
+
+      {project.slug === 'vince' && (
+        <div className="relative mt-4 flex justify-center">
+          <VinceOrb size={96} />
+        </div>
+      )}
 
       <h3 className="relative mt-5 font-display text-2xl uppercase leading-none tracking-wide text-fg">
         {project.name}
