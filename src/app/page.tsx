@@ -6,6 +6,7 @@ import ProjectCard from '@/components/ui/ProjectCard';
 import HUDStat from '@/components/ui/HUDStat';
 import Reveal from '@/components/ui/Reveal';
 import Footer from '@/components/layout/Footer';
+import FiberNet from '@/components/net/FiberNet';
 import { featuredProjects } from '@/lib/data/projects';
 import { useLenis } from '@/hooks/useLenis';
 
@@ -16,8 +17,9 @@ export default function Home() {
     <main className="relative bg-bg">
       <DualHeroCanvas />
 
-      <section className="relative z-10 flex flex-col items-center justify-center gap-8 border-t border-line bg-bg px-6 py-32 hud-grid">
-        <Reveal className="flex flex-col items-center gap-8">
+      <section className="relative z-10 flex flex-col items-center justify-center gap-8 overflow-hidden border-t border-line bg-bg px-6 py-32">
+        <FiberNet />
+        <Reveal className="relative flex flex-col items-center gap-8">
           <span className="font-hud text-[10px] uppercase tracking-widest text-muted">Transmission</span>
           <TypedQuoteCycler />
         </Reveal>
