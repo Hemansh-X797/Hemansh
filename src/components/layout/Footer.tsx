@@ -1,20 +1,12 @@
 import { socials } from '@/lib/data/socials';
+import SocialIconLink from '@/components/ui/SocialIconLink';
 
 export default function Footer() {
   return (
     <footer className="border-t border-line px-6 py-14 sm:px-10">
       <div className="flex flex-wrap gap-3">
         {socials.map((s) => (
-          <a
-            key={s.key}
-            href={s.url}
-            target="_blank"
-            rel="noreferrer"
-            data-magnetic
-            className="border border-line px-4 py-2 font-hud text-[10px] uppercase tracking-widest text-muted transition-colors duration-300 hover:border-accent hover:text-accent"
-          >
-            {s.label} · {s.handle}
-          </a>
+          <SocialIconLink key={s.key} social={s} />
         ))}
       </div>
       <div className="mt-10 font-hud text-[10px] uppercase tracking-widest text-muted">

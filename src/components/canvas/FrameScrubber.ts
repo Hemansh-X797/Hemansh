@@ -95,6 +95,13 @@ export function initFrameScrubber(
         const idx = Math.min(FRAME_COUNT - 1, Math.floor(self.progress * (FRAME_COUNT - 1)));
         frameState.i = idx;
         draw(idx);
+        // crossfade out over the final 20% of the scrub instead of a hard cut —
+        // PersistentRing reads this same scroll range to fade itself in in lockstep
+        if (canvas) {
+          const fadeStart = 0.8;
+          const op = self.progress <= fadeStart ? 1 : 1 - (self.progress - fadeStart) / (1 - fadeStart);
+          canvas.style.opacity = String(Math.max(op, 0));
+        }
       },
       onLeave: () => onComplete(),
       onLeaveBack: () => {
