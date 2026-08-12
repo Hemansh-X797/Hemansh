@@ -17,8 +17,9 @@ export default function FiberNet({ density = 60, className = '' }: { density?: n
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const ctx2d = canvas.getContext('2d');
+    if (!ctx2d) return;
+    const ctx = ctx2d;
 
     let w = 0, h = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
     let nodes: Node[] = [];

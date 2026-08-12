@@ -32,8 +32,9 @@ export default function DustPortrait({
     const wrap = wrapRef.current;
     const canvas = canvasRef.current;
     if (!wrap || !canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const ctx2d = canvas.getContext('2d');
+    if (!ctx2d) return;
+    const ctx = ctx2d; // rebind so TS keeps the non-null type inside closures defined below
 
     let w = 0, h = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
     let particles: Particle[] = [];
