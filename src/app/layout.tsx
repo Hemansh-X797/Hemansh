@@ -4,6 +4,7 @@ import localFont from 'next/font/local';
 import './globals.css';
 import AntiGravityCursor from '@/components/cursor/AntiGravityCursor';
 import Nav from '@/components/layout/Nav';
+import PersistentRing from '@/components/canvas/PersistentRing';
 
 const SITE_URL = 'https://hemansh.vercel.app';
 
@@ -140,6 +141,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-body">
         <AntiGravityCursor />
+        <PersistentRing />
         <Nav />
         {children}
       </body>

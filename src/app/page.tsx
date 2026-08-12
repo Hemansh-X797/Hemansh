@@ -1,6 +1,7 @@
 'use client';
 
 import DualHeroCanvas from '@/components/canvas/DualHeroCanvas';
+import Image from 'next/image';
 import TypedQuoteCycler from '@/components/quote/TypedQuoteCycler';
 import ProjectCard from '@/components/ui/ProjectCard';
 import HUDStat from '@/components/ui/HUDStat';
@@ -22,6 +23,33 @@ export default function Home() {
         <Reveal className="relative flex flex-col items-center gap-8">
           <span className="font-hud text-[10px] uppercase tracking-widest text-muted">Transmission</span>
           <TypedQuoteCycler />
+        </Reveal>
+      </section>
+
+      {/* Hero III — the piano recording plays over the real night photo; the frame itself
+          is the visual, nothing narrates it */}
+      <section className="relative z-10 flex h-[80vh] w-full items-end overflow-hidden border-t border-line">
+        <Image
+          src="/og/night-hero.jpg"
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover object-top opacity-70"
+        />
+        <video
+          src="/og/video.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-30 mix-blend-screen"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/20 to-transparent" />
+        <Reveal className="relative z-10 w-full px-6 pb-16 sm:px-10">
+          <span className="font-hud text-[10px] uppercase tracking-widest text-muted">Interlude</span>
+          <h2 className="mt-3 max-w-xl font-display text-3xl uppercase leading-tight tracking-wide text-shine sm:text-4xl">
+            Everything Compounds
+          </h2>
         </Reveal>
       </section>
 

@@ -2,7 +2,7 @@
 
 import Footer from '@/components/layout/Footer';
 import Reveal from '@/components/ui/Reveal';
-import SocialEmbed from '@/components/ui/SocialEmbed';
+import SocialIconLink from '@/components/ui/SocialIconLink';
 import { socials } from '@/lib/data/socials';
 import { useLenis } from '@/hooks/useLenis';
 
@@ -17,26 +17,15 @@ export default function ContactPage() {
           <h1 className="mt-4 font-display text-4xl uppercase leading-tight tracking-wide text-shine sm:text-5xl">
             Limelight
           </h1>
-          <p className="mt-6 max-w-xl font-body text-base leading-relaxed text-muted">
-            Live feeds, not a link list. X and Instagram render their real platform widgets; Spotify is a real
-            playback embed. LinkedIn and Discord don&apos;t offer public embed widgets, so those open straight
-            to the profile.
-          </p>
         </Reveal>
       </section>
 
       <section className="border-t border-line px-6 py-16 sm:px-10">
-        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-2">
-          {socials.map((s, i) => (
-            <Reveal key={s.key} delay={(i % 2) * 0.08} className="border border-line bg-[#050505] p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="font-display text-sm uppercase tracking-widest text-fg">{s.label}</span>
-                <span className="font-hud text-[10px] text-muted">{s.handle}</span>
-              </div>
-              <SocialEmbed social={s} />
-            </Reveal>
+        <Reveal className="mx-auto flex max-w-4xl flex-wrap gap-4">
+          {socials.map((s) => (
+            <SocialIconLink key={s.key} social={s} />
           ))}
-        </div>
+        </Reveal>
       </section>
 
       <Footer />

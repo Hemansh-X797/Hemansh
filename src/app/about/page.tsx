@@ -3,7 +3,7 @@
 import Footer from '@/components/layout/Footer';
 import Reveal from '@/components/ui/Reveal';
 import HUDStat from '@/components/ui/HUDStat';
-import PortraitLens from '@/components/ui/PortraitLens';
+import DustPortrait from '@/components/ui/DustPortrait';
 import FiberNet from '@/components/net/FiberNet';
 import { spokenLanguages } from '@/lib/data/stack';
 import { useLenis } from '@/hooks/useLenis';
@@ -47,8 +47,7 @@ export default function AboutPage() {
           </div>
 
           <Reveal delay={0.15} className="mx-auto w-full max-w-sm lg:mx-0">
-            <PortraitLens />
-            <p className="mt-3 font-hud text-[10px] uppercase tracking-widest text-muted">Move over the frame</p>
+            <DustPortrait />
           </Reveal>
         </div>
       </section>
