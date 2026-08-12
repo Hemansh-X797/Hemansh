@@ -15,7 +15,7 @@ export default function Nav() {
         href="/"
         data-magnetic
         data-cursor-label="HOME"
-        className="font-display text-sm uppercase tracking-widest2 text-fg"
+        className="text-shine font-display text-sm uppercase tracking-widest2"
       >
         Hemansh
       </Link>
