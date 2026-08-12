@@ -3,14 +3,14 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * Deliberately boring physics: a straight critically-damped lerp, no spring
- * overshoot, no rotation gimmick. The dot tracks the raw cursor almost 1:1;
- * the ring trails a touch slower and expands to frame whatever is under
- * [data-magnetic]. That restraint IS the luxury cue — nothing wobbles.
+ * One shape only — a small faceted obsidian shard (clip-path polygon, dark
+ * fill + thin bevel edge), not a dot, not a ring, not a dot-with-a-ring.
+ * Straight exponential follow, no spring overshoot. On a magnetic target it
+ * flattens into a thin bracket-edge outline sized to that element instead of
+ * spawning a second shape.
  */
 export default function AntiGravityCursor() {
-  const dotRef = useRef<HTMLDivElement>(null);
-  const ringRef = useRef<HTMLDivElement>(null);
+  const shardRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLDivElement>(null);
   const rafId = useRef<number>();
 
@@ -19,10 +19,9 @@ export default function AntiGravityCursor() {
 
     let mouseX = window.innerWidth / 2;
     let mouseY = window.innerHeight / 2;
-    let ringX = mouseX;
-    let ringY = mouseY;
-    let ringSize = 20;
-    let targetSize = 20;
+    let x = mouseX;
+    let y = mouseY;
+    let rot = 0;
 
     const onMove = (e: PointerEvent) => {
       mouseX = e.clientX;
@@ -55,41 +54,30 @@ export default function AntiGravityCursor() {
 
     const tick = () => {
       const magnet = findMagnet();
+      x += (mouseX - x) * 0.22;
+      y += (mouseY - y) * 0.22;
+      rot = magnet ? 0 : rot + 0.35; // shard slowly rotates at idle, stills when locked
 
-      // no overshoot: single exponential approach, no velocity term
-      ringX += (mouseX - ringX) * 0.22;
-      ringY += (mouseY - ringY) * 0.22;
-      targetSize = magnet ? 0 : 20; // 0 signals "use magnet bounds" below
-      ringSize += ((magnet ? ringSize : 20) - ringSize) * 0.25;
-
-      if (dotRef.current) {
-        dotRef.current.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0) translate(-50%, -50%)`;
-        dotRef.current.style.opacity = magnet ? '0' : '1';
-      }
-
-      if (ringRef.current) {
+      if (shardRef.current) {
         if (magnet) {
           const rect = magnet.getBoundingClientRect();
           const cx = rect.left + rect.width / 2;
           const cy = rect.top + rect.height / 2;
-          ringX += (cx - ringX) * 0.3;
-          ringY += (cy - ringY) * 0.3;
-          const w = rect.width + 12;
-          const h = rect.height + 12;
-          ringRef.current.style.width = `${w}px`;
-          ringRef.current.style.height = `${h}px`;
-          ringRef.current.style.borderRadius = '0px';
+          x += (cx - x) * 0.3;
+          y += (cy - y) * 0.3;
+          shardRef.current.style.width = `${rect.width + 12}px`;
+          shardRef.current.style.height = `${rect.height + 12}px`;
+          shardRef.current.dataset.mode = 'frame';
         } else {
-          ringRef.current.style.width = `${ringSize}px`;
-          ringRef.current.style.height = `${ringSize}px`;
-          ringRef.current.style.borderRadius = '9999px';
+          shardRef.current.style.width = '16px';
+          shardRef.current.style.height = '16px';
+          shardRef.current.dataset.mode = 'shard';
         }
-        ringRef.current.style.transform = `translate3d(${ringX}px, ${ringY}px, 0) translate(-50%, -50%)`;
-        ringRef.current.dataset.locked = magnet ? 'true' : 'false';
+        shardRef.current.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) rotate(${rot}deg)`;
       }
 
       if (labelRef.current) {
-        labelRef.current.style.transform = `translate3d(${ringX}px, ${ringY}px, 0) translate(-50%, 14px)`;
+        labelRef.current.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, 16px)`;
         labelRef.current.style.opacity = magnet?.dataset.cursorLabel ? '1' : '0';
         labelRef.current.textContent = magnet?.dataset.cursorLabel ?? '';
       }
@@ -108,13 +96,11 @@ export default function AntiGravityCursor() {
   return (
     <>
       <div
-        ref={dotRef}
-        className="pointer-events-none fixed left-0 top-0 z-[9999] h-1.5 w-1.5 rounded-full bg-fg transition-opacity duration-150 will-change-transform"
-      />
-      <div
-        ref={ringRef}
-        className="pointer-events-none fixed left-0 top-0 z-[9998] border border-fg/50 transition-[border-color] duration-200 will-change-transform [[data-locked=true]_&]:border-accent"
-        data-locked="false"
+        ref={shardRef}
+        data-mode="shard"
+        className="pointer-events-none fixed left-0 top-0 z-[9999] bg-fg transition-[background-color,border-color] duration-200 will-change-transform
+          data-[mode=shard]:[clip-path:polygon(50%_0%,100%_38%,80%_100%,20%_100%,0%_38%)]
+          data-[mode=frame]:border data-[mode=frame]:border-accent data-[mode=frame]:bg-transparent"
       />
       <div
         ref={labelRef}
