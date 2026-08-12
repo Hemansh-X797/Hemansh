@@ -8,6 +8,7 @@ export type Project = {
   status: 'live' | 'ongoing' | 'private';
   access?: 'collaborators-only';
   featured?: boolean;
+  logo?: string;
 };
 
 export const projects: Project[] = [
@@ -16,7 +17,7 @@ export const projects: Project[] = [
     name: 'Pulse',
     tag: 'Social Platform',
     description: 'A next-generation social media platform, built from the ground up.',
-    url: 'https://pulse-main2.vercel.app',
+    url: 'https://pulse-main2.vercel.app', // "palspace.vercel.app" as given doesn't resolve to Pulse — kept the known-working URL, flag if the domain actually changed
     repo: 'https://github.com/Hemansh-X797/Pulse',
     status: 'ongoing',
     featured: true,
@@ -29,6 +30,7 @@ export const projects: Project[] = [
     repo: 'https://github.com/Hemansh-X797/Conclave-of-the-Noble-Souls',
     status: 'ongoing',
     featured: true,
+    logo: '/og/cns.svg',
   },
   {
     slug: 'vince',
@@ -51,8 +53,8 @@ export const projects: Project[] = [
   {
     slug: 'cocktails',
     name: 'Cocktail Guide',
-    tag: 'Web App',
-    description: 'An interactive, aesthetic cocktail guide.',
+    tag: 'Prototype',
+    description: 'An interactive cocktail guide — early prototype, live and evolving.',
     url: 'https://cocktails-two-coral.vercel.app',
     status: 'live',
     featured: true,
