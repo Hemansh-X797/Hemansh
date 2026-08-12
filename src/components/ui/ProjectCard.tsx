@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Project } from '@/lib/data/projects';
 
 export default function ProjectCard({ project, index }: { project: Project; index: number }) {
@@ -40,14 +41,21 @@ export default function ProjectCard({ project, index }: { project: Project; inde
         <span className="font-hud text-[10px] uppercase tracking-widest text-muted transition-colors duration-300 group-hover:text-accent">
           {num} / {project.tag}
         </span>
-        {isPrivate && (
-          <span className="border border-accent/40 px-2 py-0.5 font-hud text-[9px] uppercase tracking-widest text-accent">
-            Collaborators Only
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {project.logo && (
+            <div className="relative h-6 w-6 opacity-80">
+              <Image src={project.logo} alt={`${project.name} logo`} fill className="object-contain" />
+            </div>
+          )}
+          {isPrivate && (
+            <span className="border border-accent/40 px-2 py-0.5 font-hud text-[9px] uppercase tracking-widest text-accent">
+              Collaborators Only
+            </span>
+          )}
+        </div>
       </div>
 
-      <h3 className="relative mt-5 font-display text-2xl uppercase leading-none tracking-wide text-fg transition-transform duration-500 ease-luxury group-hover:translate-x-1">
+      <h3 className="relative mt-5 font-display text-2xl uppercase leading-none tracking-wide text-fg">
         {project.name}
       </h3>
 
@@ -55,13 +63,13 @@ export default function ProjectCard({ project, index }: { project: Project; inde
         {project.description}
       </p>
 
-      <div className="relative mt-8 flex items-center gap-2 font-hud text-[10px] uppercase tracking-widest text-fg opacity-50 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100">
+      <div className="relative mt-8 flex items-center gap-2 font-hud text-[10px] uppercase tracking-widest text-fg opacity-50 transition-opacity duration-300 group-hover:opacity-100">
         {isPrivate ? (
           <>Access Restricted</>
         ) : (
           <>
             {project.status === 'live' ? 'View Live' : 'View Repository'}
-            <span className="inline-block transition-transform duration-300 group-hover:translate-x-1">→</span>
+            <span>→</span>
           </>
         )}
       </div>
