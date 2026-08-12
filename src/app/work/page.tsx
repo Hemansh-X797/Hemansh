@@ -14,7 +14,7 @@ export default function WorkPage() {
       <section className="mx-auto max-w-6xl px-6 pb-16 sm:px-10">
         <Reveal>
           <span className="font-hud text-[10px] uppercase tracking-widest text-muted">02 / Work</span>
-          <h1 className="mt-4 font-display text-4xl uppercase leading-tight tracking-wide text-fg sm:text-5xl">
+          <h1 className="mt-4 font-display text-4xl uppercase leading-tight tracking-wide text-shine sm:text-5xl">
             Systems &amp; Software
           </h1>
           <p className="mt-6 max-w-xl font-body text-base leading-relaxed text-muted">
