@@ -42,7 +42,7 @@ export default function Home() {
           muted
           loop
           playsInline
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-30 mix-blend-screen"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-60 mix-blend-screen"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/20 to-transparent" />
         <Reveal className="relative z-10 w-full px-6 pb-16 sm:px-10">
