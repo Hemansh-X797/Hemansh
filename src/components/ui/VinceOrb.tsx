@@ -65,6 +65,15 @@ export default function VinceOrb({ size = 120 }: { size?: number }) {
       <circle cx="60" cy="60" r="58" fill="none" stroke="rgba(255,255,255,0.06)" />
       <g ref={r1}>
         <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(201,162,75,0.35)" strokeWidth="0.75" strokeDasharray="2 6" />
+        {Array.from({ length: 12 }).map((_, i) => (
+          <line
+            key={i}
+            x1="60" y1="12" x2="60" y2="16"
+            stroke="rgba(201,162,75,0.5)"
+            strokeWidth="0.6"
+            transform={`rotate(${i * 30} 60 60)`}
+          />
+        ))}
       </g>
       <g ref={r2}>
         <circle cx="60" cy="60" r="36" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="0.75" strokeDasharray="10 4 2 4" />
