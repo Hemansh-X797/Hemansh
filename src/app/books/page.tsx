@@ -1,48 +1,53 @@
-'use client';
-
-import Image from 'next/image';
+import { cookies } from 'next/headers';
 import Footer from '@/components/layout/Footer';
 import Reveal from '@/components/ui/Reveal';
-import { books } from '@/lib/data/books';
-import { useLenis } from '@/hooks/useLenis';
+import BookPurchaseCard from '@/components/checkout/BookPurchaseCard';
+import { books, heroBook } from '@/lib/data/books';
+import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 
-export default function BooksPage() {
-  useLenis();
+async function getReferralDiscount(): Promise<number> {
+  const refSlug = cookies().get('ref')?.value;
+  if (!refSlug) return 0;
+  try {
+    const sb = supabaseAdmin();
+    const { data } = await sb
+      .from('influencers')
+      .select('discount_pct')
+      .eq('slug', refSlug)
+      .eq('active', true)
+      .single();
+    return data?.discount_pct ?? 0;
+  } catch {
+    return 0; // Supabase not configured yet — degrade to full price rather than error the page
+  }
+}
+
+export default async function BooksPage() {
+  const discountPct = await getReferralDiscount();
+  const restBooks = books.filter((b) => !b.isHero);
 
   return (
     <main className="relative bg-bg pt-40">
-      <section className="mx-auto max-w-6xl px-6 pb-16 sm:px-10">
+      <section className="mx-auto max-w-4xl px-6 pb-16 sm:px-10">
         <Reveal>
           <span className="font-hud text-[10px] uppercase tracking-widest text-muted">03 / Books</span>
           <h1 className="mt-4 font-display text-4xl uppercase leading-tight tracking-wide text-shine sm:text-5xl">
             Written Work
           </h1>
-          <p className="mt-6 max-w-xl font-body text-base leading-relaxed text-muted">
-            A showcase for now — a dedicated marketplace is next in line.
-          </p>
         </Reveal>
       </section>
 
       <section className="border-t border-line px-6 py-16 sm:px-10">
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-px border border-line bg-line sm:grid-cols-3">
-          {books.map((b, i) => (
-            <Reveal key={b.slug} delay={i * 0.08} className="group relative flex flex-col bg-bg p-7">
-              <div className="relative aspect-[2/3] w-full overflow-hidden border border-line bg-[#0a0a0a]">
-                <Image
-                  src={b.cover}
-                  alt={b.title}
-                  fill
-                  sizes="(max-width: 640px) 100vw, 33vw"
-                  className="object-cover grayscale transition-[filter] duration-500 ease-luxury group-hover:grayscale-0"
-                />
-              </div>
-              <h3 className="mt-6 font-display text-lg uppercase leading-snug tracking-wide text-fg">
-                {b.title}
-              </h3>
-              <p className="mt-3 font-body text-sm leading-relaxed text-muted">{b.description}</p>
-              <span className="mt-6 font-hud text-[10px] uppercase tracking-widest text-accent">
-                {b.status === 'available' ? 'Available' : 'Coming Soon'}
-              </span>
+        <Reveal className="mx-auto max-w-4xl">
+          <BookPurchaseCard book={heroBook} discountPct={discountPct} large />
+        </Reveal>
+      </section>
+
+      <section className="border-t border-line px-6 py-16 sm:px-10">
+        <div className="mx-auto grid max-w-4xl grid-cols-1 gap-8 sm:grid-cols-2">
+          {restBooks.map((b, i) => (
+            <Reveal key={b.slug} delay={i * 0.08}>
+              <BookPurchaseCard book={b} discountPct={discountPct} />
             </Reveal>
           ))}
         </div>
