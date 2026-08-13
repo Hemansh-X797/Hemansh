@@ -4,8 +4,8 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { initFractureRing, FractureRingHandle } from './FractureRing';
 
-const CORNER_SIZE = 128;
-const CORNER_MARGIN = 24;
+const CORNER_SIZE = 340; // a real hero presence, not a small corner icon
+const CORNER_MARGIN = 40;
 const VIDEO_END = 3000; // matches FrameScrubber's pinned scrub distance
 const GROW_ZONE = 900; // video fades out / ring grows to fullscreen over this range
 const SHRINK_ZONE = 900; // fullscreen ring shrinks into the corner over this range
