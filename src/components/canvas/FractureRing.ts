@@ -72,7 +72,7 @@ export function initFractureRing(canvas: HTMLCanvasElement): FractureRingHandle 
   const fill = new THREE.DirectionalLight(0x3a4a66, 0.6); // cool steel fill
   fill.position.set(-4, -2, -3);
   scene.add(fill);
-  const rim = new THREE.PointLight(0xc9a24b, 1.4, 12);
+  const rim = new THREE.PointLight(0xffffff, 1.4, 12);
   rim.position.set(0, 0, 3);
   scene.add(rim);
 
@@ -123,7 +123,7 @@ export function initFractureRing(canvas: HTMLCanvasElement): FractureRingHandle 
       void main() {
         float wf = wireMask(vBary, 1.4);
         vec3 base = vec3(0.01, 0.01, 0.01);
-        vec3 crack = vec3(0.79, 0.635, 0.294); // --accent bronze
+        vec3 crack = vec3(0.96, 0.96, 0.95); // white skeleton, not bronze
         vec3 col = mix(base, crack, wf * 0.85);
         gl_FragColor = vec4(col, 1.0);
       }
