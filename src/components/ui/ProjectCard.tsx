@@ -6,25 +6,24 @@ import PulseFlameLogo from './PulseFlameLogo';
 import VinceOrb from './VinceOrb';
 
 /**
- * The visual band is a real split-slice card (ported from your test6.html
- * reference): the mark is rendered twice, each half clipped to 50% width,
- * and on hover the two halves displace vertically in opposite directions —
- * the actual mechanism from the file, not a redraw of the idea. No stock
- * photos are faked in; each project gets its own real mark (Pulse's flame,
- * V.I.N.C.E.'s orb, Conclave's real logo) rendered large.
+ * The dark panel splits in two on hover (real slice-displacement mechanism,
+ * from your test6.html reference) — but the mark itself (Pulse's flame,
+ * V.I.N.C.E.'s orb, a project's real logo) sits on its own fixed layer above
+ * the split, centered, never moving with the halves. It gets its own hover
+ * reaction instead: flame flickers, orb speeds up, logos lift slightly.
  */
 function VisualMark({ project }: { project: Project }) {
   if (project.slug === 'pulse') return <PulseFlameLogo size={72} />;
   if (project.slug === 'vince') return <VinceOrb size={104} />;
   if (project.logo) {
     return (
-      <div className="relative h-20 w-20 opacity-90">
+      <div className="relative h-20 w-20 opacity-90 transition-transform duration-500 ease-luxury group-hover:scale-110">
         <Image src={project.logo} alt="" fill className="object-contain" />
       </div>
     );
   }
   return (
-    <span className="font-display text-6xl uppercase tracking-widest text-muted/40">
+    <span className="font-display text-6xl uppercase tracking-widest text-muted/40 transition-transform duration-500 ease-luxury group-hover:scale-110">
       {project.name.charAt(0)}
     </span>
   );
@@ -55,22 +54,20 @@ export default function ProjectCard({ project, index }: { project: Project; inde
 
   return (
     <Wrapper>
-      {/* visual band — split into two slices that displace apart on hover */}
+      {/* visual band: panel splits apart, mark layer stays fixed and reacts on its own */}
       <div className="relative h-52 w-full overflow-hidden bg-[#070707]">
-        <div className="absolute left-0 top-0 h-full w-1/2 overflow-hidden transition-transform duration-700 ease-luxury group-hover:-translate-y-3">
-          <div className="flex h-full w-[200%] items-center justify-center">
-            <VisualMark project={project} />
-          </div>
+        {/* splitting panel — pure background, carries no content, so nothing icon-like moves with it */}
+        <div className="absolute left-0 top-0 h-full w-1/2 border-r border-line/40 bg-gradient-to-br from-[#0c0c0c] to-[#050505] transition-transform duration-700 ease-luxury group-hover:-translate-y-4 group-hover:-translate-x-1" />
+        <div className="absolute right-0 top-0 h-full w-1/2 border-l border-line/40 bg-gradient-to-bl from-[#0c0c0c] to-[#050505] transition-transform duration-700 ease-luxury group-hover:translate-y-4 group-hover:translate-x-1" />
+
+        {/* fixed mark layer — sits above the split, never translates with it */}
+        <div className="pointer-events-auto absolute inset-0 z-10 flex items-center justify-center">
+          <VisualMark project={project} />
         </div>
-        <div className="absolute right-0 top-0 h-full w-1/2 overflow-hidden transition-transform duration-700 ease-luxury group-hover:translate-y-3">
-          <div className="relative -right-1/2 flex h-full w-[200%] items-center justify-center">
-            <VisualMark project={project} />
-          </div>
-        </div>
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />
+
+        <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-t from-bg via-transparent to-transparent" />
       </div>
 
-      {/* corner brackets — snap in on hover */}
       <span className="pointer-events-none absolute left-0 top-0 h-3 w-3 -translate-x-full -translate-y-full border-l border-t border-accent opacity-0 transition-all duration-300 ease-luxury group-hover:translate-x-0 group-hover:translate-y-0 group-hover:opacity-100" />
       <span className="pointer-events-none absolute bottom-0 right-0 h-3 w-3 translate-x-full translate-y-full border-b border-r border-accent opacity-0 transition-all duration-300 ease-luxury group-hover:translate-x-0 group-hover:translate-y-0 group-hover:opacity-100" />
 
