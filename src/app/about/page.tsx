@@ -46,8 +46,21 @@ export default function AboutPage() {
             </Reveal>
           </div>
 
-          <Reveal delay={0.15} className="mx-auto w-full max-w-sm lg:mx-0">
+          <Reveal delay={0.15} className="mx-auto flex w-full max-w-sm flex-col gap-4 lg:mx-0">
             <DustPortrait />
+            {/* small, dark, looping — reads as a gif rather than a video */}
+            <div className="relative aspect-[3/4] w-full overflow-hidden border border-line bg-[#050505]">
+              <video
+                src="/og/hemansh.mp4"
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="h-full w-full object-cover grayscale contrast-125 brightness-75"
+              />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />
+              <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_60px_20px_rgba(0,0,0,0.7)]" />
+            </div>
           </Reveal>
         </div>
       </section>
