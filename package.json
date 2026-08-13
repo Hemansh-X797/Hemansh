@@ -15,7 +15,9 @@
     "three": "^0.166.1",
     "gsap": "^3.12.5",
     "animejs": "^3.2.2",
-    "@studio-freight/lenis": "^1.0.42"
+    "@studio-freight/lenis": "^1.0.42",
+    "@supabase/supabase-js": "^2.45.4",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "typescript": "^5.5.4",
