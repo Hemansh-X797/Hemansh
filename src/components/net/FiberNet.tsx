@@ -2,14 +2,17 @@
 
 import { useEffect, useRef } from 'react';
 
-type Node = { x: number; y: number; vx: number; vy: number };
+type Node = { x: number; y: number; vx: number; vy: number; r: number; phase: number; speed: number };
 
 /**
  * Ambient node-and-line mesh, canvas 2D (cheap enough to run full-page
  * behind content without competing with the Three.js hero). Nodes drift
- * slowly, link lines fade in by proximity, and the whole field bends
- * gently toward the cursor — reads as "the site is alive" without being
- * the neon-green tech-demo look.
+ * slowly, link lines fade in by proximity, the whole field bends gently
+ * toward the cursor, and — the piece that was missing before — nodes
+ * pulse with a soft glow and the cursor gets its own brighter "spoke"
+ * lines out to nearby nodes, the way a live sensor mesh reads rather
+ * than a static decorative pattern. Restyled to this site's obsidian/
+ * bronze palette rather than a generic neon green/cyan HUD look.
  */
 export default function FiberNet({ density = 60, className = '' }: { density?: number; className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -36,12 +39,17 @@ export default function FiberNet({ density = 60, className = '' }: { density?: n
       canvas.style.height = `${h}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      const count = Math.round((w * h) / 22000) + density * 0;
+      // Capped rather than pure area-scaling — glow (shadowBlur) is real
+      // per-node cost, so a huge viewport shouldn't multiply it unbounded.
+      const count = Math.min(110, Math.round((w * h) / 22000) + density * 0);
       nodes = Array.from({ length: Math.max(count, 24) }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
         vx: (Math.random() - 0.5) * 0.15,
         vy: (Math.random() - 0.5) * 0.15,
+        r: 0.9 + Math.random() * 0.9,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.012 + Math.random() * 0.02,
       }));
     };
 
@@ -50,14 +58,18 @@ export default function FiberNet({ density = 60, className = '' }: { density?: n
       mouseX = e.clientX - rect.left;
       mouseY = e.clientY - rect.top;
     };
+    const onLeave = () => {
+      mouseX = -9999;
+      mouseY = -9999;
+    };
 
     const draw = () => {
       ctx.clearRect(0, 0, w, h);
 
       for (const n of nodes) {
-        // gentle drift toward center-bias + subtle cursor attraction
         n.x += n.vx;
         n.y += n.vy;
+        n.phase += n.speed;
         if (mouseX > -1000) {
           const dx = mouseX - n.x;
           const dy = mouseY - n.y;
@@ -86,11 +98,41 @@ export default function FiberNet({ density = 60, className = '' }: { density?: n
         }
       }
 
-      for (const n of nodes) {
-        ctx.fillStyle = 'rgba(201,162,75,0.4)';
+      // Cursor spokes — brighter bronze lines out to whatever is close,
+      // separate from the ambient mesh, so the field visibly answers
+      // to the pointer rather than just drifting past it.
+      if (mouseX > -1000) {
+        for (const n of nodes) {
+          const dx = n.x - mouseX, dy = n.y - mouseY;
+          const d = Math.hypot(dx, dy);
+          if (d < 170) {
+            const alpha = (1 - d / 170) * 0.5;
+            ctx.strokeStyle = `rgba(201,162,75,${alpha})`;
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(mouseX, mouseY);
+            ctx.lineTo(n.x, n.y);
+            ctx.stroke();
+          }
+        }
         ctx.beginPath();
-        ctx.arc(n.x, n.y, 1.1, 0, Math.PI * 2);
+        ctx.arc(mouseX, mouseY, 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(201,162,75,0.85)';
+        ctx.shadowColor = '#C9A24B';
+        ctx.shadowBlur = 10;
         ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      for (const n of nodes) {
+        const glow = Math.sin(n.phase) * 0.5 + 0.5;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(201,162,75,${0.28 + glow * 0.35})`;
+        ctx.shadowColor = '#C9A24B';
+        ctx.shadowBlur = glow * 5;
+        ctx.fill();
+        ctx.shadowBlur = 0;
       }
 
       raf = requestAnimationFrame(draw);
@@ -99,11 +141,13 @@ export default function FiberNet({ density = 60, className = '' }: { density?: n
     resize();
     window.addEventListener('resize', resize);
     window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseleave', onLeave);
     raf = requestAnimationFrame(draw);
 
     return () => {
       window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseleave', onLeave);
       cancelAnimationFrame(raf);
     };
   }, [density]);
