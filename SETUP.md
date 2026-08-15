@@ -81,7 +81,15 @@ be tampered with to grant a bigger discount than what's in the DB.
 ## Analytics
 
 `hemansh.vercel.app/ops-x7k2q9` — this exact path is not linked from the
-site, not in the sitemap, and marked `noindex`. It asks for `ANA_KEY`. Bookmark it privately; there's no other way to reach it, which is the point.
+site, not in the sitemap, and marked `noindex`. There is no visible login
+form: visiting it without credentials returns a real 404, identical to a
+route that was never built — a password prompt would itself be a sign
+something's there. To get in, append `?key=<ANA_KEY>` once
+(`/ops-x7k2q9?key=your-secret`); a correct key sets a 4-hour httpOnly
+session cookie and redirects you to the bare URL, so the key doesn't sit
+in your visible address bar afterward. Wrong key, missing key, or no
+cookie all produce the exact same 404. Bookmark the bare URL privately
+once you're in — there's no other way to reach it, which is the point.
 
 ## Third-party code used, and licenses
 
