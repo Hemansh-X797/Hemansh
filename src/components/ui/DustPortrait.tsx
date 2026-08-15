@@ -1,207 +1,324 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PORTRAIT_DATA_URI } from '@/lib/data/portraitBase64';
 
-type Particle = {
-  tx: number; ty: number;
-  x: number; y: number;
-  vx: number; vy: number;
-  r: number;
-  a: number;
-};
-
 /**
- * The portrait, decomposed into dust — sourced from an inline base64 data
- * URI (PORTRAIT_DATA_URI), so there's no separate image file to go missing
- * or fail to load. Darker pixels sample as denser particles inside a tight
- * oval, forming a legible face rather than generic noise; particles thin
- * out and drift past the oval edge. On hover, inside the oval only: a
- * force field pushes particles clear of the cursor, and a circular lens
- * reveals the real photo in black-and-white underneath.
+ * The portrait, rebuilt on the technique that actually reads as premium:
+ * dust particles sampled from real image brightness, drawn in two passes
+ * (a soft additive glow halo, then a crisp core dot) so they look lit
+ * rather than flat, a genuine 3D tilt that follows the cursor within the
+ * frame, a slow "breathing" idle scale when untouched, and — the piece
+ * the old hover-lens version didn't have — a real click-to-disperse:
+ * the dust blows outward from the click point and the actual sharp
+ * portrait fades in underneath. Click again to pull the dust back
+ * together. Colors are the site's own obsidian/bronze tokens, not the
+ * reference's neon palette.
  */
 export default function DustPortrait({ className = '' }: { className?: string }) {
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const tiltRef = useRef<HTMLDivElement>(null);
+  const revealRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const srcImgRef = useRef<HTMLImageElement>(null);
+  const [revealed, setRevealed] = useState(false);
+  const revealedRef = useRef(false);
 
   useEffect(() => {
-    const wrap = wrapRef.current;
+    const stage = stageRef.current;
+    const tiltWrapper = tiltRef.current;
     const canvas = canvasRef.current;
-    if (!wrap || !canvas) return;
-    const ctx2d = canvas.getContext('2d');
-    if (!ctx2d) return;
-    const ctx = ctx2d;
+    const srcImg = srcImgRef.current;
+    if (!stage || !tiltWrapper || !canvas || !srcImg) return;
 
-    let w = 0, h = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let particles: Particle[] = [];
-    let mouseX = -9999, mouseY = -9999;
-    let inOval = false;
-    let raf = 0;
-    let img: HTMLImageElement | null = null;
+    const ctx = canvas.getContext('2d', { alpha: true });
+    if (!ctx) return;
 
-    const ovalRect = () => ({ cx: w / 2, cy: h * 0.44, rx: w * 0.3, ry: h * 0.36 });
-
-    const insideOval = (x: number, y: number) => {
-      const { cx, cy, rx, ry } = ovalRect();
-      const dx = (x - cx) / rx;
-      const dy = (y - cy) / ry;
-      return dx * dx + dy * dy <= 1;
+    type Particle = {
+      baseX: number; baseY: number; x: number; y: number;
+      r: number; alpha: number; alpha0: number;
+      phase: number; speed: number; amp: number;
+      vx: number; vy: number; dispersing: boolean;
+      depth: number;
     };
 
+    let W = 0, H = 0;
+    let particles: Particle[] = [];
+    let raf = 0;
+    let mouse = { x: -9999, y: -9999, active: false };
+    let tiltTarget = { x: 0, y: 0 };
+    let tiltCurrent = { x: 0, y: 0 };
+    let lastInteraction = performance.now();
+    let breathePhase = 0;
+    const TILT_MAX = 7;
+    const FORCE_RADIUS = 46;
+
+    function sizeCanvas() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      const rect = stage!.getBoundingClientRect();
+      W = rect.width;
+      H = rect.height;
+      canvas!.width = Math.round(W * dpr);
+      canvas!.height = Math.round(H * dpr);
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
     function buildParticles() {
-      if (!img) return;
-      const sampleW = 130;
-      const sampleH = Math.round((sampleW * img.height) / img.width);
+      sizeCanvas();
+      const sampleW = 90;
+      const sampleH = Math.round(sampleW * (H / W || 1));
       const off = document.createElement('canvas');
       off.width = sampleW;
       off.height = sampleH;
       const octx = off.getContext('2d');
       if (!octx) return;
-      octx.drawImage(img, 0, 0, sampleW, sampleH);
-      const data = octx.getImageData(0, 0, sampleW, sampleH).data;
 
-      const { cx, cy, rx, ry } = ovalRect();
+      const iw = srcImg!.naturalWidth || 1;
+      const ih = srcImg!.naturalHeight || 1;
+      const scale = Math.max(sampleW / iw, sampleH / ih); // cover, matches CSS object-fit: cover
+      const dw = iw * scale, dh = ih * scale;
+      const dx = (sampleW - dw) / 2;
+      const dy = (sampleH - dh) / 2;
+      octx.drawImage(srcImg!, dx, dy, dw, dh);
+
+      let data: Uint8ClampedArray | null = null;
+      try {
+        data = octx.getImageData(0, 0, sampleW, sampleH).data;
+      } catch {
+        data = null;
+      }
+
+      function brightnessAt(nx: number, ny: number) {
+        const sx = Math.min(sampleW - 1, Math.max(0, Math.round(nx * (sampleW - 1))));
+        const sy = Math.min(sampleH - 1, Math.max(0, Math.round(ny * (sampleH - 1))));
+        if (!data) return 0.55;
+        const idx = (sy * sampleW + sx) * 4;
+        return (data[idx] + data[idx + 1] + data[idx + 2]) / (3 * 255);
+      }
+
       const pts: Particle[] = [];
+      const gridCols = 74;
+      const gridRows = Math.round(gridCols * (H / W || 1));
+      const cellW = W / gridCols, cellH = H / gridRows;
 
-      for (let sy = 0; sy < sampleH; sy++) {
-        for (let sx = 0; sx < sampleW; sx++) {
-          const i = (sy * sampleW + sx) * 4;
-          const lum = (data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11) / 255;
-          const px = cx - rx + (sx / sampleW) * rx * 2;
-          const py = cy - ry + (sy / sampleH) * ry * 2;
-          if (!insideOval(px, py)) continue;
-          const density = Math.pow(1 - lum, 1.4); // sharper falloff — reads as a face, not fog
-          if (Math.random() > 0.06 + density * 0.85) continue;
+      for (let gy = 0; gy < gridRows; gy++) {
+        for (let gx = 0; gx < gridCols; gx++) {
+          const px = gx * cellW + cellW * 0.5;
+          const py = gy * cellH + cellH * 0.5;
+          const nx = px / W, ny = py / H;
+          const b = brightnessAt(nx, ny);
+          const adj = Math.max(0, (b - 0.05) / 0.95);
+          const faceBoost = Math.pow(adj, 0.7);
+          const density = Math.min(1, 0.22 + faceBoost * 0.74);
+          if (Math.random() > density) continue;
+
+          const baseX = px + (Math.random() - 0.5) * cellW * 1.05;
+          const baseY = py + (Math.random() - 0.5) * cellH * 1.05;
+          const alpha = Math.min(1, 0.26 + density * 0.7 + Math.random() * 0.1);
           pts.push({
-            tx: px, ty: py,
-            x: px + (Math.random() - 0.5) * 70,
-            y: py + (Math.random() - 0.5) * 70,
-            vx: 0, vy: 0,
-            r: 0.7 + Math.random() * 1.0,
-            a: 0.4 + density * 0.55,
+            baseX, baseY, x: baseX, y: baseY,
+            r: 0.42 + density * 1.0 + Math.random() * 0.25,
+            alpha, alpha0: alpha,
+            phase: Math.random() * Math.PI * 2,
+            speed: 0.006 + Math.random() * 0.01,
+            amp: 1.8 + Math.random() * 3.2,
+            vx: 0, vy: 0, dispersing: false,
+            depth: 0.3 + Math.random() * 0.9,
           });
         }
       }
-
-      const ambientCount = Math.round(pts.length * 0.15);
-      for (let i = 0; i < ambientCount; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const dist = 1 + Math.random() * 0.7;
-        const px = cx + Math.cos(angle) * rx * dist;
-        const py = cy + Math.sin(angle) * ry * dist;
-        pts.push({
-          tx: px, ty: py,
-          x: px + (Math.random() - 0.5) * 30,
-          y: py + (Math.random() - 0.5) * 30,
-          vx: (Math.random() - 0.5) * 0.04,
-          vy: (Math.random() - 0.5) * 0.04,
-          r: 0.5 + Math.random() * 0.7,
-          a: 0.05 + Math.random() * 0.08,
-        });
-      }
-
-      particles = pts.slice(0, 4200);
+      particles = pts.slice(0, 6500);
     }
 
-    const resize = () => {
-      const rect = wrap.getBoundingClientRect();
-      w = rect.width;
-      h = rect.height;
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      buildParticles();
-    };
-
-    const onMove = (e: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      mouseX = e.clientX - rect.left;
-      mouseY = e.clientY - rect.top;
-      inOval = insideOval(mouseX, mouseY);
-    };
-    const onLeave = () => {
-      mouseX = -9999;
-      mouseY = -9999;
-      inOval = false;
-    };
-
-    const LENS_R = 76;
-    const FIELD_R = 128;
-
     function draw() {
-      ctx.clearRect(0, 0, w, h);
+      if (!ctx) return;
+      ctx.clearRect(0, 0, W, H);
 
+      // pass 1: additive glow halo
+      ctx.globalCompositeOperation = 'lighter';
       for (const p of particles) {
-        if (inOval) {
-          const dx = p.x - mouseX;
-          const dy = p.y - mouseY;
-          const d = Math.hypot(dx, dy);
-          if (d < FIELD_R && d > 0.01) {
-            const push = (1 - d / FIELD_R) * 2.4;
-            p.vx += (dx / d) * push;
-            p.vy += (dy / d) * push;
+        if (p.dispersing) {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vx *= 0.985;
+          p.vy *= 0.985;
+          p.alpha *= 0.965;
+        } else {
+          p.phase += p.speed;
+          let targetX = p.baseX + Math.sin(p.phase) * p.amp + tiltCurrent.y * p.depth * 0.6;
+          let targetY = p.baseY + Math.cos(p.phase * 0.85) * p.amp - tiltCurrent.x * p.depth * 0.6;
+          if (mouse.active && !revealedRef.current) {
+            const dx = targetX - mouse.x, dy = targetY - mouse.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < FORCE_RADIUS) {
+              const nx2 = dx / (dist || 1), ny2 = dy / (dist || 1);
+              const tx = -ny2, ty = nx2;
+              let bx = nx2 * 0.85 + tx * 0.38, by = ny2 * 0.85 + ty * 0.38;
+              const blen = Math.sqrt(bx * bx + by * by) || 1;
+              bx /= blen; by /= blen;
+              targetX = mouse.x + bx * FORCE_RADIUS * 1.03;
+              targetY = mouse.y + by * FORCE_RADIUS * 1.03;
+            }
           }
+          p.x += (targetX - p.x) * 0.16;
+          p.y += (targetY - p.y) * 0.16;
         }
-        p.vx += (p.tx - p.x) * 0.025;
-        p.vy += (p.ty - p.y) * 0.025;
-        p.vx *= 0.85;
-        p.vy *= 0.85;
-        p.x += p.vx;
-        p.y += p.vy;
+        if (p.alpha <= 0.01 || p.r < 1.1) continue;
+        const haloAlpha = p.alpha * 0.22;
+        if (haloAlpha <= 0) continue;
+        ctx.fillStyle = `rgba(201,162,75,${haloAlpha})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * 2.0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalCompositeOperation = 'source-over';
 
-        ctx.fillStyle = `rgba(235,232,225,${p.a})`;
+      // pass 2: crisp core dots
+      for (const p of particles) {
+        if (p.alpha <= 0.01) continue;
+        ctx.fillStyle = `rgba(245,240,230,${p.alpha})`;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      if (inOval && img) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(mouseX, mouseY, LENS_R, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.filter = 'grayscale(100%) contrast(1.1) brightness(1.05)';
-        const { cx, cy, rx, ry } = ovalRect();
-        const dw = rx * 2 * 1.65;
-        const dh = ry * 2 * 1.65;
-        ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
-        ctx.filter = 'none';
-        ctx.strokeStyle = 'rgba(255,255,255,0.65)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(mouseX, mouseY, LENS_R, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-      }
-
+      applyTilt();
       raf = requestAnimationFrame(draw);
     }
 
-    const image = new Image();
-    image.src = PORTRAIT_DATA_URI;
-    image.onload = () => {
-      img = image;
-      resize();
-      raf = requestAnimationFrame(draw);
+    function applyTilt() {
+      tiltCurrent.x += (tiltTarget.x - tiltCurrent.x) * 0.08;
+      tiltCurrent.y += (tiltTarget.y - tiltCurrent.y) * 0.08;
+
+      const idleFor = performance.now() - lastInteraction;
+      let scale = 1;
+      if (!revealedRef.current && idleFor > 1600) {
+        breathePhase += 0.012;
+        scale = 1 + Math.sin(breathePhase) * 0.01;
+      }
+      tiltWrapper!.style.transform = `scale(${scale}) rotateX(${tiltCurrent.x}deg) rotateY(${tiltCurrent.y}deg)`;
+    }
+
+    function onMove(e: PointerEvent) {
+      const rect = stage!.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      mouse.x = px;
+      mouse.y = py;
+      mouse.active = px >= 0 && px <= W && py >= 0 && py <= H && !revealedRef.current;
+      lastInteraction = performance.now();
+
+      if (!revealedRef.current) {
+        const cx = W / 2, cy = H / 2;
+        const nx = Math.max(-1, Math.min(1, (px - cx) / (W / 2 || 1)));
+        const ny = Math.max(-1, Math.min(1, (py - cy) / (H / 2 || 1)));
+        tiltTarget.x = -ny * TILT_MAX;
+        tiltTarget.y = nx * TILT_MAX;
+      }
+    }
+
+    function onLeave() {
+      mouse.active = false;
+      tiltTarget.x = 0;
+      tiltTarget.y = 0;
+    }
+
+    function disperse() {
+      if (revealedRef.current) return;
+      revealedRef.current = true;
+      setRevealed(true);
+
+      const cx = W / 2, cy = H / 2;
+      for (const p of particles) {
+        const dx = p.x - cx, dy = p.y - cy;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const speed = 3 + Math.random() * 5;
+        p.vx = (dx / dist) * speed + (Math.random() - 0.5) * 2;
+        p.vy = (dy / dist) * speed + (Math.random() - 0.5) * 2;
+        p.dispersing = true;
+      }
+    }
+
+    function reset() {
+      revealedRef.current = false;
+      setRevealed(false);
+      for (const p of particles) {
+        p.x = p.baseX;
+        p.y = p.baseY;
+        p.alpha = p.alpha0;
+        p.dispersing = false;
+        p.vx = 0;
+        p.vy = 0;
+      }
+    }
+
+    const onClick = () => {
+      if (revealedRef.current) reset();
+      else disperse();
     };
 
-    window.addEventListener('resize', resize);
-    canvas.addEventListener('pointermove', onMove);
-    canvas.addEventListener('pointerleave', onLeave);
+    const init = () => {
+      buildParticles();
+    };
+    if (srcImg.complete && srcImg.naturalWidth) init();
+    else srcImg.onload = init;
+
+    let resizeTimer: ReturnType<typeof setTimeout>;
+    const onResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(buildParticles, 150);
+    };
+
+    stage.addEventListener('pointermove', onMove, { passive: true });
+    stage.addEventListener('pointerleave', onLeave);
+    stage.addEventListener('click', onClick);
+    window.addEventListener('resize', onResize);
+    raf = requestAnimationFrame(draw);
 
     return () => {
-      window.removeEventListener('resize', resize);
-      canvas.removeEventListener('pointermove', onMove);
-      canvas.removeEventListener('pointerleave', onLeave);
       cancelAnimationFrame(raf);
+      clearTimeout(resizeTimer);
+      stage.removeEventListener('pointermove', onMove);
+      stage.removeEventListener('pointerleave', onLeave);
+      stage.removeEventListener('click', onClick);
+      window.removeEventListener('resize', onResize);
     };
   }, []);
 
   return (
-    <div ref={wrapRef} className={`relative aspect-[4/5] w-full ${className}`}>
-      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+    <div
+      ref={stageRef}
+      className={`relative aspect-[4/5] w-full cursor-pointer overflow-hidden ${className}`}
+      style={{ perspective: '900px' }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- used only as an offscreen sample source, never rendered */}
+      <img ref={srcImgRef} src={PORTRAIT_DATA_URI} alt="" className="hidden" crossOrigin="anonymous" />
+
+      <div
+        ref={tiltRef}
+        className="absolute inset-0 transition-opacity duration-500"
+        style={{ transformStyle: 'preserve-3d', opacity: revealed ? 0 : 1, pointerEvents: revealed ? 'none' : 'auto' }}
+      >
+        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+      </div>
+
+      <div
+        ref={revealRef}
+        aria-hidden
+        className="absolute inset-0 transition-opacity duration-700"
+        style={{ opacity: revealed ? 1 : 0, pointerEvents: revealed ? 'auto' : 'none' }}
+      >
+        <img
+          src={PORTRAIT_DATA_URI}
+          alt=""
+          className="h-full w-full object-cover"
+          style={{ filter: 'grayscale(35%) contrast(1.08) brightness(1.02)' }}
+        />
+      </div>
+
+      <span className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 font-hud text-[9px] uppercase tracking-widest text-muted opacity-60">
+        {revealed ? 'Click to re-scatter' : 'Click to reveal'}
+      </span>
     </div>
   );
 }
