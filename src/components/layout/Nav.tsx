@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 const links = [
   { href: '/about', label: 'About' },
@@ -15,9 +16,17 @@ export default function Nav() {
         href="/"
         data-magnetic
         data-cursor-label="HOME"
-        className="text-shine font-display text-sm uppercase tracking-widest2"
+        className="flex items-center gap-2.5"
       >
-        Hemansh
+        <Image
+          src="/logo-h.png"
+          alt=""
+          width={22}
+          height={22}
+          className="h-[22px] w-[22px] shrink-0"
+          priority
+        />
+        <span className="text-shine font-display text-sm uppercase tracking-widest2">Hemansh</span>
       </Link>
       <ul className="hidden gap-8 sm:flex">
         {links.map((l) => (
