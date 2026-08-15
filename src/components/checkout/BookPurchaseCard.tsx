@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Book } from '@/lib/data/books';
 import PayPalButton from './PayPalButton';
 import EmailClaim from './EmailClaim';
+import BookCoverFallback from './BookCoverFallback';
 
 export default function BookPurchaseCard({
   book,
@@ -16,13 +17,25 @@ export default function BookPurchaseCard({
   large?: boolean;
 }) {
   const [paidOrderId, setPaidOrderId] = useState<string | null>(null);
+  const [coverFailed, setCoverFailed] = useState(false);
   const displayPrice = ((book.priceCents * (1 - discountPct / 100)) / 100).toFixed(2);
 
   return (
     <div className={`border border-line bg-[#050505] p-6 ${large ? 'sm:p-10' : ''}`}>
       <div className={`grid gap-6 ${large ? 'sm:grid-cols-[220px_1fr] sm:items-center' : ''}`}>
         <div className={`relative overflow-hidden border border-line bg-[#0a0a0a] ${large ? 'aspect-[2/3]' : 'aspect-[2/3] mb-4'}`}>
-          <Image src={book.cover} alt={book.title} fill sizes="220px" className="object-cover" />
+          {coverFailed ? (
+            <BookCoverFallback title={book.title} large={large} />
+          ) : (
+            <Image
+              src={book.cover}
+              alt={book.title}
+              fill
+              sizes="220px"
+              className="object-cover"
+              onError={() => setCoverFailed(true)}
+            />
+          )}
         </div>
         <div>
           <h3 className={`font-display uppercase tracking-wide text-fg ${large ? 'text-3xl' : 'text-lg'}`}>
