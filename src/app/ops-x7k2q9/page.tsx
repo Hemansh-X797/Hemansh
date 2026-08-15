@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
+import { notFound, redirect } from 'next/navigation';
 import crypto from 'crypto';
 import type { Metadata } from 'next';
-import AnalyticsGate from '@/components/analytics/AnalyticsGate';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 
 // noindex/nofollow on this exact route, and it is never linked from Nav,
@@ -9,15 +9,53 @@ import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 // same as the ANA_KEY password behind it.
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
+function safeEqual(a: string, b: string) {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);
+}
+
+function sessionValueFor(real: string) {
+  return crypto.createHash('sha256').update(real).digest('hex');
+}
+
 function isAuthed(): boolean {
   const real = process.env.ANA_KEY;
   if (!real) return false;
   const session = cookies().get('ana_session')?.value;
   if (!session) return false;
-  const expected = crypto.createHash('sha256').update(real).digest('hex');
-  const a = Buffer.from(session);
-  const b = Buffer.from(expected);
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
+  return safeEqual(session, sessionValueFor(real));
+}
+
+/**
+ * There is deliberately no visible "Restricted" / password form anywhere.
+ * A form is itself a tell that something exists at this URL. Instead:
+ *   - already have the right session cookie -> render the dashboard.
+ *   - arrive with ?key=<ANA_KEY> that matches -> set the cookie and
+ *     redirect to the bare URL (so the key never sits in browser history
+ *     as a visible query string past this one hop), then render.
+ *   - anything else at all (wrong key, no key, no cookie, ANA_KEY unset)
+ *     -> notFound(). Same 404 Next.js renders for a route that doesn't
+ *     exist, so there's nothing to distinguish "wrong password" from
+ *     "this page was never here."
+ */
+function authenticateOrNotFound(key: string | undefined) {
+  const real = process.env.ANA_KEY;
+  if (!real) notFound();
+  if (isAuthed()) return;
+
+  if (typeof key === 'string' && key.length > 0 && safeEqual(key, real!)) {
+    cookies().set('ana_session', sessionValueFor(real!), {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 4, // 4 hour session
+      path: '/',
+    });
+    redirect('/ops-x7k2q9');
+  }
+
+  notFound();
 }
 
 async function getStats() {
@@ -71,8 +109,12 @@ async function getStats() {
   };
 }
 
-export default async function AnalyticsPage() {
-  if (!isAuthed()) return <AnalyticsGate />;
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: { key?: string };
+}) {
+  authenticateOrNotFound(searchParams.key);
 
   let stats;
   try {
